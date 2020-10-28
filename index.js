@@ -1,62 +1,43 @@
+const startupDebugger = require('debug')('app:startup');
+const dbDebugger = require('debug')('app:db');
+const config = require('config');
 const express = require('express');
 const Joi = require('joi');
+const logger = require('./middleware/logger');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const courses = require('./routes/courses');//My entity
+const home = require('./routes/home');
 
 const app = express();
 app.use(express.json());
+app.use(helmet());
+app.use(logger);
+//app.use(morgan('tiny'));
+//For pug usage
+app.set('view engine','pug');
+app.set('views','./views');
+//End pug
+app.use('/api/courses',courses);
+app.use('/',home);
 
-const courses = [{id:1,name:"Test1"},{id:2,name:"Test1"}];
+
+
+// console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+// console.log(`app NODE_ENV: ${app.get('env')}`);
+//console.log(config.get('name')); 
+// console.log(`mail pass: ${config.get('mail.password')}`);
+startupDebugger('My debug startup');
+dbDebugger('My db debugger...');
+console.log(process.env.DEBUG);
+
+
+app.use(express.urlencoded({extended:true}));
+app.use(express.static('public'));
 
 app.get('/test',(req,res) => {
-    res.send('It works!');
+    return res.send('It works!');
 });
-
-app.get('/api/courses',(req,res) => {
-    res.send(courses);
-});
-
-app.get('/api/courses/:id',(req,res) => {
-    const my_course = courses.find(course => course.id === parseInt(req.params.id))
-
-    res.setHeader('Content-Type','application/json');
-    if(!my_course){
-        res.status(404).send(JSON.stringify({message:"Not found"}));
-    }
-    res.status(200).send(my_course);
-
-    res.send(my_course);
-});
-
-app.post('/api/courses',(req,res) => {
-    // const validatorSchema =  Joi.object({ 
-    //     name: Joi.string().min(6).required() 
-    // });
-
-    // const result = validatorSchema.validate(req.body);
-
-    // if(result.error){
-    //     //res.status(422).send({message:'There is error'});
-    //     res.status(422).send(result.error.details[0].message);
-    // }
-
-    const {error} = validateCourse(req.body);
-    if(error){
-        //res.status(422).send({message:'There is error'});
-        res.status(422).send(error.details[0].message);
-    }
-
-    const name = req.body.name;
-    res.status(200).send(JSON.stringify({message:`The course ${name} is stored`}));
-});
-
-const validateCourse = (course) => {
-    const validatorSchema =  Joi.object({ 
-        name: Joi.string().min(6).required() 
-    });
-
-    return validatorSchema.validate(course);
-}
-
-
 
 const port = process.env.PORT || 5000 ;
 app.listen(port, ()=>{console.log(`Running at ${port}, Please wait...`)});
